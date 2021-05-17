@@ -1,0 +1,45 @@
+---
+# tasks file for cisco_bgp_diff
+- name: Get BGP table
+  ios_command:
+    commands: show ip bgp
+  register: bgp_table
+
+# - debug: var=bgp_table.stdout_lines
+
+- name:
+  stat:
+    path: dumps/{{ inventory_hostname }}.txt
+  delegate_to: localhost
+  register: file_exists
+
+- name: Save to file when new check
+  template:
+    src: templates/bgp_table.j2
+    dest: dumps/{{ inventory_hostname }}.txt
+  when: not file_exists.stat.exists
+  delegate_to: localhost
+
+- name: Save to file when new check
+  template:
+    src: templates/bgp_table.j2
+    dest: dumps/{{ inventory_hostname }}-new.txt
+  register: new_file_exists
+  when: file_exists.stat.exists
+  delegate_to: localhost
+
+- name: Check for Diffs
+  shell: diff -B dumps/{{ inventory_hostname }}.txt dumps/{{ inventory_hostname }}-new.txt
+  failed_when: diff_result.rc > 1
+  register: diff_result
+  delegate_to: localhost
+
+- name: Make diff report files
+  shell: vimdiff -n dumps/{{ inventory_hostname }}.txt dumps/{{ inventory_hostname }}-new.txt -c TOhtml  -c 'w! diffs/{{ inventory_hostname }}.html' -c 'qa!'
+  failed_when: "diff_output.rc > 1"
+  delegate_to: localhost
+  register: diff_output
+  when:
+    - diff_result.rc == 1
+  async: 120
+  poll: 30

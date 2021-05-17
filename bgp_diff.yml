@@ -1,0 +1,14 @@
+---
+- name: Cisco BGP Diff
+  hosts: all
+  gather_facts: false
+  connection: network_cli
+  vars:
+    ansible_network_os: ios
+  collections:
+    - cisco.ios
+
+  tasks:
+    - name: Import cisco_bgp_diff
+      import_role:
+        name: cisco_bgp_diff
